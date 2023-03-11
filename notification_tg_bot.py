@@ -12,35 +12,35 @@ def get_homework_notification(dvmn_token, tg_chat_id):
     params = {
         'timestamp': 'last_attempt_timestamp',
     }
-    try:
-        while True:
-            response = requests.get(long_polling_url,headers=headers, params=params)
-            new_attempts = response.json().get('new_attempts')
-            for item in new_attempts:
-                lesson_title = item['lesson_title']
-                lesson_url = item['lesson_url']
-                is_negative = item['is_negative']
+    response = requests.get(long_polling_url,headers=headers, params=params, timeout=5)
+    if response.ok:
+        new_attempts = response.json().get('new_attempts')
+        for attempt in new_attempts:
+            lesson_title = attempt['lesson_title']
+            lesson_url = attempt['lesson_url']
+            is_negative = attempt['is_negative']
             text = f'Преподаватель проверил работу: "{lesson_title}"!\nСсылка: {lesson_url}!\n'
             if is_negative:
                 text += '\nК сожалению, в работе нашлись ошибки!'
             else:
                 text += '\nРабота принята, ты молодец!'
-            if response.ok:
-                bot.send_message(text=text, chat_id= tg_chat_id)
-    except requests.exceptions.ReadTimeout:
-        requests.get(long_polling_url,headers=headers, params=params, timeout=0.5)
+            bot.send_message(text=text, chat_id= tg_chat_id)
 
 
-if __name__ == '__main__':
+def main():
     load_dotenv()
     tg_bot_token= os.environ['TG_BOT_TOKEN']
     tg_chat_id= os.environ['TG_CHAT_ID']
     dvmn_token = os.environ['DVMN_TOKEN']
     bot = telegram.Bot(token=tg_bot_token)
 
-    try:
-        get_homework_notification(dvmn_token,tg_chat_id)
-    except requests.exceptions.ConnectionError:
-        time.sleep(5)
-    except TypeError as ex:
-        time.sleep(5)
+    while True:
+        try:
+            get_homework_notification(bot, dvmn_token, tg_chat_id)
+        except requests.exceptions.ConnectionError:
+            time.sleep(5)
+        except requests.exceptions.ReadTimeout as ex:
+            time.sleep(5)
+
+if __name__ == '__main__':
+    main()
