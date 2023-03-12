@@ -9,17 +9,14 @@ def get_homework_notification(dvmn_token, tg_chat_id):
     headers = {
         'Authorization': f'Token {dvmn_token}'
     }
-    params = {
-        'timestamp': 'last_attempt_timestamp',
-    }
-    response = requests.get(long_polling_url,headers=headers, params=params, timeout=5)
+    response = requests.get(long_polling_url, headers=headers, params=params, timeout=90)
+    if response.json().get('status') == 'timeout':
+        params = {
+            'timestamp': datetime.datetime.now().timestamp()
+            }
     if response.ok:
         new_attempts = response.json().get('new_attempts')
         for attempt in new_attempts:
-            if attempt['timestamp'] == 'timeout':
-                params = {
-                    'timestamp_to_request': datetime.datetime.now().timestamp()
-                        }
             lesson_title = attempt['lesson_title']
             lesson_url = attempt['lesson_url']
             is_negative = attempt['is_negative']
@@ -41,10 +38,10 @@ def main():
     while True:
         try:
             get_homework_notification(bot, dvmn_token, tg_chat_id)
+        except requests.exceptions.ReadTimeout:
+            time.sleep(5)
         except requests.exceptions.ConnectionError:
             continue
-        except requests.exceptions.ReadTimeout as ex:
-            time.sleep(5)
 
 if __name__ == '__main__':
     main()
