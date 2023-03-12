@@ -16,6 +16,10 @@ def get_homework_notification(dvmn_token, tg_chat_id):
     if response.ok:
         new_attempts = response.json().get('new_attempts')
         for attempt in new_attempts:
+            if attempt['timestamp'] == 'timeout':
+                params = {
+                    'timestamp_to_request': datetime.datetime.now().timestamp()
+                        }
             lesson_title = attempt['lesson_title']
             lesson_url = attempt['lesson_url']
             is_negative = attempt['is_negative']
@@ -38,7 +42,7 @@ def main():
         try:
             get_homework_notification(bot, dvmn_token, tg_chat_id)
         except requests.exceptions.ConnectionError:
-            time.sleep(5)
+            continue
         except requests.exceptions.ReadTimeout as ex:
             time.sleep(5)
 
